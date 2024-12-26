@@ -23,12 +23,18 @@ const Manager = () => {
     });
   }
 
+  const getPasswords = async () => {
+    let request = await fetch("http://localhost:3000/");
+
+    let passwords = await request.json();
+
+    setPasswordArray(passwords);
+
+    console.log(passwords);
+  };
+
   useEffect(() => {
-    let passwords = localStorage.getItem("passwords");
-    // let passwordArray;
-    if (passwords) {
-      setPasswordArray(JSON.parse(passwords));
-    }
+    getPasswords();
   }, []);
 
   const showPassword = () => {
@@ -42,32 +48,40 @@ const Manager = () => {
     }
   };
 
-  const savePassword = () => {
+  const savePassword = async () => {
+    if (
+      form.site.length > 3 &&
+      form.username.length > 3 &&
+      form.password.length > 3
+    ) {
+      // If any such id exists in the db, delete it
+      await fetch("http://localhost:3000/", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: form.id }),
+      });
 
-    if(form.site.length > 3 && form.username.length > 3 && form.password.length > 3){
       setPasswordArray([...passwordArray, { ...form, id: uuidv4() }]);
 
-    localStorage.setItem(
-      "passwords",
-      JSON.stringify([...passwordArray, { ...form, id: uuidv4() }])
-    );
+      await fetch("http://localhost:3000/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, id: uuidv4() }),
+      });
 
-    setForm({ site: "", username: "", password: "" });
+      setForm({ site: "", username: "", password: "" });
 
-    toast.success("Password saved successfully", {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-    console.log(...passwordArray, form);
-
-    }
-    else{
+      toast.success("Password saved successfully", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    } else {
       toast.warn("Error: Password not saved!", {
         position: "top-right",
         autoClose: 3000,
@@ -79,11 +93,9 @@ const Manager = () => {
         theme: "colored",
       });
     }
-
-   
   };
 
-  const deletePassword = (id) => {
+  const deletePassword = async (id) => {
     let deteleResponse = confirm(
       "Are you sure you want to delete this password?"
     );
@@ -91,10 +103,11 @@ const Manager = () => {
     if (deteleResponse) {
       setPasswordArray(passwordArray.filter((item) => item.id !== id));
 
-      localStorage.setItem(
-        "passwords",
-        JSON.stringify(passwordArray.filter((item) => item.id !== id))
-      );
+      await fetch("http://localhost:3000/", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
 
       toast.error("Password deleted successfully", {
         position: "top-right",
@@ -106,16 +119,15 @@ const Manager = () => {
         progress: undefined,
         theme: "colored",
       });
-      
     }
   };
 
   const editPassword = (id) => {
-    setForm(passwordArray.filter((item) => item.id === id)[0]);
+
+
+    setForm({...passwordArray.filter((item) => item.id === id)[0], id: id});
 
     setPasswordArray(passwordArray.filter((item) => item.id !== id));
-
-    
   };
 
   const handleChange = (e) => {
@@ -175,7 +187,6 @@ const Manager = () => {
                 onChange={handleChange}
                 placeholder="Enter password"
                 ref={passwordRef}
-              
                 className="rounded-full border border-green-500 w-full text-black p-4 py-1"
                 name="password"
                 id="password"
@@ -277,7 +288,7 @@ const Manager = () => {
                       </td>
                       <td className="text-center py-2 border ">
                         <div className="flex items-center justify-center">
-                          <span>{item.password}</span>
+                          <span>{"*".repeat(item.password.length)}</span>
 
                           <div
                             className="copyBtn size-7 cursor-pointer"
